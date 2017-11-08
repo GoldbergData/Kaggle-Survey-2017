@@ -40,9 +40,10 @@ clean_FF_data <- FF_raw_data
 
 ``` r
 ggplot(filter(clean_MC_data, !is.na(Country))) +
-  geom_bar(aes(x = fct_infreq(Country))) +
+  geom_bar(aes(x = fct_infreq(Country), y = ..prop.., group = 1)) +
   labs(x = 'Country', y = 'Responses',
        title = 'Survey Responses By Country') +
+  scale_y_continuous(labels = percent) +
   theme(plot.title = element_text(size = 14, face = "bold",
                                        color = "black", vjust = -1)) +
   theme(plot.subtitle = element_text(size = 8, face = "italic",
