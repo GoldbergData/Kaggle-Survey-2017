@@ -44,7 +44,7 @@ clean_FF_data <- FF_raw_data
 ```
 
 ## Response by Country
-*Exclude NA*
+*Excluded NA*
 ```{r Country}
 ggplot(filter(clean_MC_data, !is.na(Country))) +
   geom_bar(aes(x = fct_infreq(Country), y = ..prop.., group = 1), fill = '#2178a3', color = 'white') +
