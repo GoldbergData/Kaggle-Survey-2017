@@ -20,7 +20,7 @@ Create clean data frame to manipulate.
 Response by Country
 -------------------
 
-*Exclude NA* ![](Figs/Country-1.png)
+*Excluded NA* ![](Figs/Country-1.png)
 
 Response by Gender
 ------------------
