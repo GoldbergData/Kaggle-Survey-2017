@@ -27,7 +27,6 @@ MC_raw_data <- read_csv('multipleChoiceResponses.csv')
 FF_raw_data <- read_csv('freeformResponses.csv')
 schema <- read_csv('schema.csv')
 conversion_rates <- read_csv('conversionRates.csv')
-
 ```
 
 We'll start with a quick glimpse of the data.
@@ -40,7 +39,30 @@ This dataset has 16,716 rows (survey entries) and 228 columns.
 Create clean data frame to manipulate.
 ```{r}
 clean_MC_data <- MC_raw_data
+
+clean_MC_data <- filter(clean_MC_data, !is.na(GenderSelect), !is.na(Country), !is.na(Age), !is.na(EmploymentStatus), Age > 5 & Age < 90)
+
+# add factor, levels, and label to Gender MC
+clean_MC_data$GenderSelect <- factor(clean_MC_data$GenderSelect, 
+                                     levels = c('Male', 'Female', 
+                                                'Non-binary, genderqueer, or gender non-conforming', 
+                                                'A different identity'),
+                                     labels = c('Male', 'Female', 
+                                                'Non-conforming', 'Different Identity'))
 clean_FF_data <- FF_raw_data
+```
+
+
+```{r Functions}
+MC_group <- function(question, df = clean_MC_data) {
+  question <- enquo(question)
+  df %>% 
+    filter(!is.na(!!question)) %>%
+    group_by(!!question) %>% 
+    summarise(count = n()) %>% 
+    mutate(percent = count / sum(count) * 100) %>% 
+    arrange(desc(count))
+}
 ```
 
 ## Response by Country
@@ -92,11 +114,11 @@ ggplot(filter(clean_MC_data, !is.na(Country) & !is.na(GenderSelect))) +
   labs(x = 'Country', y = 'Proportion',
        title = 'Survey Responses by Country and Gender') +
   scale_y_continuous(labels = percent) +
-  scale_fill_brewer(type = 'div', palette = 7, 
-                    guide = guide_legend(title = NULL, keywidth = .75, keyheight = .75), name = 'Gender', 
-                    breaks = c('A different identity', 'Female', 'Male',
-                    'Non-binary, genderqueer, or gender non-conforming'),
-                    labels = c('Different Identity', 'Female', 'Male', 'Non-conforming')) +
+  scale_fill_brewer(type = 'qual', palette = 3, direction = 1,
+                    guide = guide_legend(title = NULL, keywidth = .75, keyheight = .75), name = 'Gender') + #, 
+                    #breaks = c('A different identity', 'Female', 'Male',
+                    #'Non-binary, genderqueer, or gender non-conforming'),
+                    #labels = c('Different Identity', 'Female', 'Male', 'Non-conforming')) +
   theme_minimal() +
   theme(legend.position = "top") +
   theme(axis.text.x = element_text(size = 10, angle = 50, hjust = 1))
@@ -118,76 +140,65 @@ ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 
 ##Age Distribution by Gender
 *Ages between 5 and 90; Excluded NA*
 ```{r Age Facet}
-clean_MC_data$GenderSelect <- factor(clean_MC_data$GenderSelect, labels = c('A different identity', 'Female', 'Male', 'Non-conforming'))
 ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90)) +
-  geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
+  geom_histogram(aes(x = Age, y = ..density..), bins = 50, fill = '#2178a3', color = 'white') +
   geom_density(aes(x = Age, color = I('#ee5b4b'))) +
   guides(color = "none") +
   facet_wrap(~ GenderSelect) +
   scale_y_continuous(labels = percent) +
   labs(x = 'Age', y = 'Responses',
-       title = 'Survey Responses By Age') +
+       title = 'Survey Responses By Gender and Age') +
   theme_minimal()
-  
-
 ```
 
+## Age Distribution of Top 10% Quantile Countries
+*Ages between 5 and 90; Excluded NA*
+If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
+```{r Age Distribution of Top 10% Quantile Countries}
+top_tenQ_countries <- MC_group(Country) %>%
+  filter(count >= quantile(count, 0.90))
 
-```{r}
-# A function to analyze questions where you choose only one answer
-chooseOne = function(question, filteredData = clean_MC_data) {
-
-  filteredData %>% 
-    # Remove any rows where the respondent didn't answer the question
-    filter(!UQ(sym(question)) == "") %>% 
-    # Group by the responses to the question
-    group_by_(question) %>% 
-    # Count how many respondents selected each option
-    summarise(count = n()) %>% 
-    # Calculate what percent of respondents selected each option
-    mutate(percent = (count / sum(count)) * 100) %>% 
-    # Arrange the counts in descending order
-    arrange(desc(count))
-}
-
-# A function to analyze questions where you choose multiple answers
-chooseMultiple = function(question, filteredData = cleanMCData){
-
-  filteredData %>% 
-    # Remove any rows where the respondent didn't answer the question
-    filter(!UQ(sym(question)) == "") %>%
-    # Remove all columns except question
-    select(question) %>% 
-    # Add a column with the initial number of respondents to question
-    mutate(totalCount = n()) %>% 
-    # Split multiple answers apart at the comma, but ignore commas inside parentheses
-    mutate(selections = strsplit(as.character(UQ(sym(question))), 
-                                 '\\([^)]+,(*SKIP)(*FAIL)|,\\s*', perl = TRUE)) %>%
-    # Split answers are now nested, need to unnest them
-    unnest(selections) %>% 
-    # Group by the selected responses to the question
-    group_by(selections) %>% 
-   # Count how many respondents selected each option
-    summarise(totalCount = max(totalCount),
-              count = n()) %>% 
-    # Calculate what percent of respondents selected each option
-    mutate(percent = (count / totalCount) * 100) %>% 
-    # Arrange the counts in descending order
-    arrange(desc(count))
-  
-}
+ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90,
+              Country %in% (top_tenQ_countries$Country))) +
+  geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
+  geom_density(aes(x = Age, color = I('#ee5b4b'))) +
+  guides(color = "none") +
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~ Country) +
+  labs(x = 'Age', y = 'Responses',
+       title = 'Age Distribution of Top 10% Quantile Countries') +
+  theme_minimal()
 ```
 
-```{r}
-chooseOne('GenderSelect')
-
+## Age Distribution of Top 10% Quantile Countries by Male/Female
+*Ages between 5 and 90; Excluded NA*
+If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
+```{r Age Distribution of Top 10% Quantile Countries By Male/Female}
+ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), 
+              GenderSelect %in% (c('Male', 'Female')), Age > 5 & Age < 90,
+              Country %in% (top_tenQ_countries$Country))) +
+  geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
+  geom_density(aes(x = Age, color = I('#ee5b4b'))) +
+  guides(color = "none") +
+  scale_y_continuous(labels = percent) +
+  facet_grid(GenderSelect ~ Country) +
+  labs(x = 'Age', y = 'Responses',
+       title = 'Age Distribution of Top 10% Quantile Countries by Male/Female') +
+  theme_minimal()
 ```
 
+## Employment Status
+```{r Employment}
+EmploymentStatus <- MC_group(EmploymentStatus)
 
-```{r}
-library(knitr)
-opts_chunk$set(results = "asis")
-summary(clean_MC_data$Age)
+ggplot(EmploymentStatus) +
+  geom_col(aes(x = reorder(EmploymentStatus, count), y = percent / 100), fill = '#2178a3', color = 'white') +
+  guides(color = "none") +
+  scale_y_continuous(labels = percent) +
+  coord_flip() +
+  labs(x = 'Employment Status', y = 'Proportion',
+       title = "What's Your Current Employment Status?") +
+  theme_minimal()
 ```
 
 

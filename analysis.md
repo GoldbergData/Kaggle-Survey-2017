@@ -42,13 +42,57 @@ Age Distribution by Gender
 
 *Ages between 5 and 90; Excluded NA* ![](Figs/Age%20Facet-1.png)
 
-    ## # A tibble: 4 x 3
-    ##           GenderSelect count    percent
-    ##                 <fctr> <int>      <dbl>
-    ## 1                 Male 13610 81.8843632
-    ## 2               Female  2778 16.7137958
-    ## 3 A different identity   159  0.9566211
-    ## 4       Non-conforming    74  0.4452199
+Age Distribution of Top 10% Quantile Countries
+----------------------------------------------
 
-    ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-    ##    0.00   25.00   30.00   32.37   37.00  100.00     331
+*Ages between 5 and 90; Excluded NA* If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
+
+``` r
+top_tenQ_countries <- MC_group(Country) %>%
+  filter(count >= quantile(count, 0.90))
+
+ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90,
+              Country %in% ((top_tenQ_countries$Country))) +
+  geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
+  geom_density(aes(x = Age, color = I('#ee5b4b'))) +
+  guides(color = "none") +
+  scale_y_continuous(labels = percent) +
+  facet_wrap(~ Country) +
+  labs(x = 'Age', y = 'Responses',
+       title = 'Age Distribution of Top 10% Quantile Countries') +
+  theme_minimal()
+```
+
+    ## Error: <text>:14:0: unexpected end of input
+    ## 12:        title = 'Age Distribution of Top 10% Quantile Countries') +
+    ## 13:   theme_minimal()
+    ##    ^
+
+Age Distribution of Top 10% Quantile Countries by Male/Female
+-------------------------------------------------------------
+
+*Ages between 5 and 90; Excluded NA* If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
+
+``` r
+ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), 
+              GenderSelect %in% (c('Male', 'Female')), Age > 5 & Age < 90,
+              Country %in% ((top_tenQ_countries$Country)) +
+  geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
+  geom_density(aes(x = Age, color = I('#ee5b4b'))) +
+  guides(color = "none") +
+  scale_y_continuous(labels = percent) +
+  facet_grid(GenderSelect ~ Country) +
+  labs(x = 'Age', y = 'Responses',
+       title = 'Age Distribution of Top 10% Quantile Countries by Male/Female') +
+  theme_minimal()
+```
+
+    ## Error: <text>:12:0: unexpected end of input
+    ## 10:        title = 'Age Distribution of Top 10% Quantile Countries by Male/Female') +
+    ## 11:   theme_minimal()
+    ##    ^
+
+Employment Status
+-----------------
+
+![](Figs/Employment-1.png)
