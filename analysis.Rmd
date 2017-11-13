@@ -7,7 +7,7 @@ output: github_document
 
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
-                      echo=FALSE, warning=FALSE, message=FALSE)
+                      warning=FALSE, message=FALSE)
 ```
 
 ## Load Libraries
@@ -19,6 +19,7 @@ library(forcats)
 library(rlang)
 library(RColorBrewer)
 library(viridis)
+library(knitr)
 ```
 
 ## Read Data
@@ -42,6 +43,9 @@ clean_MC_data <- MC_raw_data
 
 clean_MC_data <- filter(clean_MC_data, !is.na(GenderSelect), !is.na(Country), !is.na(Age), !is.na(EmploymentStatus), Age > 5 & Age < 90)
 
+# order country by frequency
+clean_MC_data$Country <- fct_infreq(clean_MC_data$Country)
+
 # add factor, levels, and label to Gender MC
 clean_MC_data$GenderSelect <- factor(clean_MC_data$GenderSelect, 
                                      levels = c('Male', 'Female', 
@@ -51,7 +55,6 @@ clean_MC_data$GenderSelect <- factor(clean_MC_data$GenderSelect,
                                                 'Non-conforming', 'Different Identity'))
 clean_FF_data <- FF_raw_data
 ```
-
 
 ```{r Functions}
 MC_group <- function(question, df = clean_MC_data) {
@@ -68,7 +71,7 @@ MC_group <- function(question, df = clean_MC_data) {
 ## Response by Country
 *Excluded NA*
 ```{r Country}
-ggplot(filter(clean_MC_data, !is.na(Country))) +
+ggplot(clean_MC_data) +
   geom_bar(aes(x = fct_infreq(Country), y = ..prop.., group = 1), fill = '#2178a3', color = 'white') +
   labs(x = 'Country', y = 'Responses',
        title = 'Survey Responses By Country') +
@@ -88,7 +91,7 @@ ggplot(filter(clean_MC_data, !is.na(Country))) +
 ## Response by Gender
 *Excluded NA*
 ```{r Gender}
-ggplot(filter(clean_MC_data, !is.na(GenderSelect))) +
+ggplot(clean_MC_data) +
   geom_bar(aes(x = fct_infreq(GenderSelect), y = ..prop.., group = 1), fill = '#2178a3', color = 'white') +
   labs(x = 'Gender', y = 'Responses',
        title = 'Survey Responses By Gender') +
@@ -109,16 +112,13 @@ ggplot(filter(clean_MC_data, !is.na(GenderSelect))) +
 ## Response by Country and Gender
 *Excluded NA*
 ```{r Country and Gender}
-ggplot(filter(clean_MC_data, !is.na(Country) & !is.na(GenderSelect))) +
+ggplot(clean_MC_data) +
   geom_bar(aes(x = fct_infreq(Country), fill = GenderSelect), position = 'fill') +
   labs(x = 'Country', y = 'Proportion',
        title = 'Survey Responses by Country and Gender') +
   scale_y_continuous(labels = percent) +
   scale_fill_brewer(type = 'qual', palette = 3, direction = 1,
-                    guide = guide_legend(title = NULL, keywidth = .75, keyheight = .75), name = 'Gender') + #, 
-                    #breaks = c('A different identity', 'Female', 'Male',
-                    #'Non-binary, genderqueer, or gender non-conforming'),
-                    #labels = c('Different Identity', 'Female', 'Male', 'Non-conforming')) +
+                    guide = guide_legend(title = NULL, keywidth = .75, keyheight = .75), name = 'Gender') +
   theme_minimal() +
   theme(legend.position = "top") +
   theme(axis.text.x = element_text(size = 10, angle = 50, hjust = 1))
@@ -127,7 +127,7 @@ ggplot(filter(clean_MC_data, !is.na(Country) & !is.na(GenderSelect))) +
 ##Age Distribution
 *Ages between 5 and 90; Excluded NA*
 ```{r Age}
-ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90)) +
+ggplot(clean_MC_data) +
   geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
   geom_density(aes(x = Age, color = I('#ee5b4b'))) +
   guides(color = "none") +
@@ -153,13 +153,13 @@ ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 
 
 ## Age Distribution of Top 10% Quantile Countries
 *Ages between 5 and 90; Excluded NA*
-If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
-```{r Age Distribution of Top 10% Quantile Countries}
-top_tenQ_countries <- MC_group(Country) %>%
-  filter(count >= quantile(count, 0.90))
 
-ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90,
-              Country %in% (top_tenQ_countries$Country))) +
+If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
+```{r Age Distribution of Top Quantile Countries}
+top_tenQ_countries <- (MC_group(Country) %>%
+  filter(count >= quantile(count, 0.90)))
+
+ggplot(filter(clean_MC_data, Country %in% (top_tenQ_countries$Country))) +
   geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
   geom_density(aes(x = Age, color = I('#ee5b4b'))) +
   guides(color = "none") +
@@ -172,10 +172,10 @@ ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 
 
 ## Age Distribution of Top 10% Quantile Countries by Male/Female
 *Ages between 5 and 90; Excluded NA*
+
 If a country or territory received less than 50 respondents, they are grouped into a group named “Other” for anonymity.
-```{r Age Distribution of Top 10% Quantile Countries By Male/Female}
-ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), 
-              GenderSelect %in% (c('Male', 'Female')), Age > 5 & Age < 90,
+```{r Age Distribution of Top Quantile Countries By Male/Female}
+ggplot(filter(clean_MC_data, GenderSelect %in% c('Male', 'Female'),
               Country %in% (top_tenQ_countries$Country))) +
   geom_histogram(aes(x = Age, y = ..density..), fill = '#2178a3', color = 'white') +
   geom_density(aes(x = Age, color = I('#ee5b4b'))) +
