@@ -9,12 +9,14 @@ Load Libraries
 ``` r
 library(tidyverse)
 library(gridExtra)
+library(grid)
 library(scales)
 library(forcats)
 library(rlang)
 library(RColorBrewer)
 library(viridis)
 library(knitr)
+library(gtable)
 ```
 
 Read Data
@@ -46,6 +48,7 @@ clean_MC_data <- filter(clean_MC_data, !is.na(GenderSelect), !is.na(Country), !i
 
 # order country by frequency
 clean_MC_data$Country <- fct_infreq(clean_MC_data$Country)
+clean_MC_data$EmploymentStatus <- fct_infreq(clean_MC_data$EmploymentStatus)
 
 # add factor, levels, and label to Gender MC
 clean_MC_data$GenderSelect <- factor(clean_MC_data$GenderSelect, 
@@ -76,7 +79,7 @@ Response by Country
 
 ``` r
 ggplot(clean_MC_data) +
-  geom_bar(aes(x = fct_infreq(Country), y = ..prop.., group = 1), fill = '#2178a3', color = 'white') +
+  geom_bar(aes(x = Country, y = ..prop.., group = 1), fill = '#2178a3', color = 'white') +
   labs(x = 'Country', y = 'Responses',
        title = 'Survey Responses By Country') +
   scale_y_continuous(labels = percent) +
@@ -126,7 +129,7 @@ Response by Country and Gender
 
 ``` r
 ggplot(clean_MC_data) +
-  geom_bar(aes(x = fct_infreq(Country), fill = GenderSelect), position = 'fill') +
+  geom_bar(aes(x = Country, fill = GenderSelect), position = 'fill') +
   labs(x = 'Country', y = 'Proportion',
        title = 'Survey Responses by Country and Gender') +
   scale_y_continuous(labels = percent) +
@@ -163,7 +166,7 @@ Age Distribution by Gender
 *Ages between 5 and 90; Excluded NA*
 
 ``` r
-ggplot(filter(clean_MC_data, !is.na(Age), !is.na(GenderSelect), Age > 5 & Age < 90)) +
+ggplot(clean_MC_data) +
   geom_histogram(aes(x = Age, y = ..density..), bins = 50, fill = '#2178a3', color = 'white') +
   geom_density(aes(x = Age, color = I('#ee5b4b'))) +
   guides(color = "none") +
@@ -228,14 +231,34 @@ Employment Status
 ``` r
 EmploymentStatus <- MC_group(EmploymentStatus)
 
-ggplot(EmploymentStatus) +
-  geom_col(aes(x = reorder(EmploymentStatus, count), y = percent / 100), fill = '#2178a3', color = 'white') +
+g_employ1 <- ggplot(clean_MC_data) +
+  geom_bar(aes(x = EmploymentStatus, y = ..prop.., group = 1), fill = '#2178a3', 
+          color = 'white') +
   guides(color = "none") +
+  scale_x_discrete(limits = rev(levels(clean_MC_data$EmploymentStatus))) +
   scale_y_continuous(labels = percent) +
   coord_flip() +
-  labs(x = 'Employment Status', y = 'Proportion',
+  labs(x = NULL, y = 'Proportion',
        title = "What's Your Current Employment Status?") +
   theme_minimal()
+
+g_employ2 <- ggplot(clean_MC_data) +
+  geom_bar(aes(x = EmploymentStatus, fill = GenderSelect), position = 'fill', 
+          color = 'white') +
+  guides(color = "none") +
+  scale_x_discrete(limits = rev(levels(clean_MC_data$EmploymentStatus))) +
+  scale_y_continuous(labels = percent) +
+  coord_flip() +
+  labs(x = NULL, y = 'Proportion',
+       title = "Gender Proportion") +
+  scale_fill_brewer(type = 'qual', palette = 3, direction = 1,
+                    guide = guide_legend(title = NULL, keywidth = .75, keyheight = .75), name = 'Gender') +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  theme(axis.text.x = element_text(size = 10))
+
+grid.arrange(g_employ1, g_employ2,
+             left = textGrob('Employment Status', rot = 90, vjust = 1))
 ```
 
 ![](Figs/Employment-1.png)
