@@ -261,4 +261,4 @@ grid.arrange(g_employ1, g_employ2,
              left = textGrob('Employment Status', rot = 90, vjust = 1))
 ```
 
-![](Figs/Employment-1.png)
+![](Figs/Employment%20Grid-1.png)

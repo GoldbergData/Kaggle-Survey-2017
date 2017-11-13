@@ -191,7 +191,7 @@ ggplot(filter(clean_MC_data, GenderSelect %in% c('Male', 'Female'),
 ```
 
 ## Employment Status
-```{r Employment}
+```{r Employment Grid}
 EmploymentStatus <- MC_group(EmploymentStatus)
 
 g_employ1 <- ggplot(clean_MC_data) +
